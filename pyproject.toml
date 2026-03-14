@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "pyrstat"
+version = "0.1.0"
+description = "R econometrics in Python – powered by rpy2 + rpackagemanager"
+requires-python = ">=3.11"
+dependencies = [
+    "rpy2",
+    "numpy",
+    "pandas",
+    "rpackagemanager @ git+https://github.com/vxtnv/RPackageManager.git",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
