@@ -594,3 +594,44 @@ def predict(model, newdata=None, type: str = "link"):
 
     with localconverter(ro.default_converter + numpy2ri.converter):
         return np.array(result).flatten()
+    
+
+
+
+def confusionMatrix(
+    predicted,
+    actual,
+    positive: str = "1",
+    pretty: bool = True,
+):
+    """
+    Confusion Matrix – wie R's caret::confusionMatrix().
+
+    Parameters
+    ----------
+    predicted : array-like
+        Vorhergesagte Klassen (z.B. df["stroke_hat"]).
+    actual : array-like
+        Tatsächliche Klassen (z.B. df["stroke"]).
+    positive : str
+        Label der positiven Klasse (default "1").
+    pretty : bool
+        R-style Output in der Konsole (default True).
+
+    Returns
+    -------
+    R confusionMatrix-Objekt.
+    """
+    _rpkg.install_packages("caret")
+    _r_caret = importr("caret")
+
+    r_pred = ro.FactorVector(ro.StrVector([str(x) for x in predicted]))
+    r_actual = ro.FactorVector(ro.StrVector([str(x) for x in actual]))
+
+    result = _r_caret.confusionMatrix(r_pred, r_actual, positive=positive)
+
+    if pretty:
+        captured = ro.r("capture.output")(result)
+        print("\n".join(list(captured)))
+
+    return result
