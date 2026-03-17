@@ -560,3 +560,37 @@ def summary_ivreg(model):
     print("\n".join(filtered))
 
 
+
+
+
+
+
+# ── predict ────────────────────────────────────────────────────
+
+def predict(model, newdata=None, type: str = "link"):
+    """
+    Vorhersagen – wie R's predict().
+
+    Parameters
+    ----------
+    model : R lm/glm-Objekt
+    newdata : pd.DataFrame | None
+        Neue Daten (None = fitted values auf Trainingsdaten).
+    type : str
+        "link" (default, linearer Prädiktor),
+        "response" (transformiert, z.B. Wahrscheinlichkeiten bei glm),
+        "terms".
+
+    Returns
+    -------
+    np.ndarray
+    """
+    kwargs = {"type": type}
+
+    if newdata is not None:
+        kwargs["newdata"] = _df_to_r(newdata)
+
+    result = _r_stats.predict(model, **kwargs)
+
+    with localconverter(ro.default_converter + numpy2ri.converter):
+        return np.array(result).flatten()
