@@ -656,18 +656,19 @@ def predict(model, newdata=None, type: str = "link"):
 
     # ── mlogit ──────────────────────────────────────────────────────
     if "mlogit" in r_class:
-        ro.globalenv["_pyrstat_model_"] = model
-        result = ro.r('fitted(_pyrstat_model_, outcome = FALSE)')
+        _rpkg.install_packages("mlogit")
+
+        r_fitted = ro.r("fitted")
+        result = r_fitted(model, outcome=False)
         mat = np.array(result)
 
-        # Spaltennamen (Alternativen) aus R holen
-        col_names = list(ro.r('colnames(fitted(_pyrstat_model_, outcome = FALSE))'))
+        col_names = list(ro.r("colnames")(result))
         if not col_names:
-            # Fallback: aus dem Modell-Objekt
             try:
-                col_names = list(ro.r('names(_pyrstat_model_$freq)'))
+                col_names = list(ro.r("names")(model.rx2("freq")))
             except Exception:
-                col_names = [f"alt_{i}" for i in range(mat.shape[1] if mat.ndim > 1 else 1)]
+                n_alt = mat.shape[1] if mat.ndim > 1 else 1
+                col_names = [f"alt_{i}" for i in range(n_alt)]
 
         n_alt = len(col_names)
         return pd.DataFrame(mat.reshape(-1, n_alt), columns=col_names)
@@ -682,7 +683,6 @@ def predict(model, newdata=None, type: str = "link"):
 
     with localconverter(ro.default_converter + numpy2ri.converter):
         return np.array(result).flatten()
-
 
 
 def confusionMatrix(
