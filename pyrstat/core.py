@@ -2,7 +2,7 @@
 pyrstat.core
 ~~~~~~~~~~~~
 Core wrappers around R econometrics functions:
-  - lm / summary (stats)
+  - lm / glm / summary (stats)
   - vcovHC       (sandwich)
   - coeftest     (lmtest)
   - linearHypothesis (car)
@@ -151,6 +151,64 @@ def lm(formula: str, data):
     model._pyrstat_formula = formula
     return model
 
+
+# ── glm ──────────────────────────────────────────────────────────────────
+
+def glm(
+    formula: str,
+    data,
+    family: str = "gaussian",
+):
+    """
+    Generalisiertes Lineares Modell fitten – wie R's glm().
+
+    Parameters
+    ----------
+    formula : str
+        R-style Formel, z.B. "y ~ x1 + x2".
+    data : pd.DataFrame
+        Pandas DataFrame mit den Daten.
+    family : str
+        Verteilungsfamilie als String, z.B.:
+        - "gaussian"            (default, = lm)
+        - "binomial"            (Logit)
+        - "binomial(link='probit')"
+        - "poisson"
+        - "Gamma"
+        - "inverse.gaussian"
+        - "quasi"
+        Wird intern via ro.r() evaluiert, d.h. R-Syntax ist erlaubt.
+
+    Returns
+    -------
+    R glm-Objekt (kann an summary, coeftest, vcovHC, linearHypothesis
+    übergeben werden).
+    """
+    if isinstance(data, pd.DataFrame):
+        r_df = _df_to_r(data)
+    else:
+        from pyrstat.univariate_timeseries import _unwrap
+        r_df = _unwrap(data)
+
+    ro.globalenv["_pyrstat_df_"] = r_df
+
+    # family als R-Objekt evaluieren (erlaubt z.B. "binomial(link='probit')")
+    r_family = ro.r(family)
+
+    model = _r_stats.glm(
+        Formula(formula),
+        data=ro.globalenv["_pyrstat_df_"],
+        family=r_family,
+    )
+    model._pyrstat_formula = formula
+    return model
+
+
+
+
+
+
+
 def head(y, n: int = 6):
     """Erste n Elemente – wie R's head(). Negative n = alles außer die letzten |n|."""
     from pyrstat.univariate_timeseries import _unwrap, RTimeSeries
@@ -161,8 +219,10 @@ def head(y, n: int = 6):
 def summary(model):
     """
     R-style summary() – generische Funktion wie in R.
-    Funktioniert für lm, VAR, Arima, ivreg, etc.
+    Funktioniert für lm, glm, VAR, Arima, ivreg, etc.
     """
+    r_class = list(ro.r("class")(model))
+
     captured = ro.r("capture.output")(ro.r("summary")(model))
     lines = list(captured)
 
@@ -174,7 +234,13 @@ def summary(model):
             filtered.append("Call:")
             formula_str = getattr(model, "_pyrstat_formula", None)
             if formula_str:
-                filtered.append("lm(formula = " + formula_str + ")")
+                if "glm" in r_class:
+                    prefix = "glm"
+                elif "ivreg" in r_class:
+                    prefix = "ivreg"
+                else:
+                    prefix = "lm"
+                filtered.append(prefix + "(formula = " + formula_str + ")")
             filtered.append("")
             skip = True
             continue
@@ -182,7 +248,8 @@ def summary(model):
             # Call-Block endet bei nächstem bekannten Abschnitt
             if any(line.strip().startswith(s) for s in [
                 "Residual", "Estimation", "Coefficients", "---",
-                "Covariance", "Correlation", "Series:", "ARIMA"
+                "Covariance", "Correlation", "Series:", "ARIMA",
+                "Deviance", "AIC", "Number", "Dispersion",
             ]):
                 skip = False
             else:
@@ -191,6 +258,8 @@ def summary(model):
             filtered.append(line)
 
     print("\n".join(filtered))
+
+
 
 
 # ── vcovHC ──────────────────────────────────────────────────────────────
