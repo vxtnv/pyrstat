@@ -285,15 +285,30 @@ def head(y, n: int = 6):
 # ── summary ─────────────────────────────────────────────────────────────
 
 def summary(model):
-    """
-    R-style summary() – generische Funktion wie in R.
-    Funktioniert für lm, glm, mlogit, VAR, Arima, ivreg, etc.
-    """
     r_class = list(ro.r("class")(model))
 
     captured = ro.r("capture.output")(ro.r("summary")(model))
     lines = list(captured)
 
+    # mlogit: keine Call-Bereinigung nötig, direkt ausgeben
+    if "mlogit" in r_class:
+        filtered = []
+        formula_str = getattr(model, "_pyrstat_formula", None)
+        for line in lines:
+            if line.strip().startswith("Call:"):
+                filtered.append("Call:")
+                if formula_str:
+                    filtered.append("mlogit(formula = " + formula_str + ")")
+                    filtered.append("")
+                continue
+            # Zeilen mit structure(...) oder mlogit_data(...) überspringen
+            if "structure(" in line or "mlogit_data(" in line:
+                continue
+            filtered.append(line)
+        print("\n".join(filtered))
+        return
+
+    # lm / glm / ivreg / Arima: bisherige Logik
     filtered = []
     skip = False
     for line in lines:
@@ -301,9 +316,7 @@ def summary(model):
             filtered.append("Call:")
             formula_str = getattr(model, "_pyrstat_formula", None)
             if formula_str:
-                if "mlogit" in r_class:
-                    prefix = "mlogit"
-                elif "glm" in r_class:
+                if "glm" in r_class:
                     prefix = "glm"
                 elif "ivreg" in r_class:
                     prefix = "ivreg"
@@ -318,7 +331,6 @@ def summary(model):
                 "Residual", "Estimation", "Coefficients", "---",
                 "Covariance", "Correlation", "Series:", "ARIMA",
                 "Deviance", "AIC", "Number", "Dispersion",
-                "Frequencies", "Log-Likelihood", "bfgs", "Newton",
             ]):
                 skip = False
             else:
@@ -327,7 +339,6 @@ def summary(model):
             filtered.append(line)
 
     print("\n".join(filtered))
-
 
 # ── vcovHC ──────────────────────────────────────────────────────────────
 
