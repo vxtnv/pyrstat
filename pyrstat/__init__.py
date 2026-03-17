@@ -7,7 +7,7 @@ from pyrstat.core import (
 
 
 __all__ = [
-    "lm", "summary", "coef", "fitted_values", "residuals",
+    "lm","glm", "summary", "coef", "fitted_values", "residuals",
     "vcovHC", "coeftest", "bptest", "reset", "linearHypothesis",
     "ivreg", "summary_ivreg",
 ]
