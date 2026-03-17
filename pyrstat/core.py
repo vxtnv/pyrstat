@@ -205,6 +205,74 @@ def glm(
 
 
 
+def mlogit(
+    formula: str,
+    data,
+    choice: str = None,
+    shape: str = "long",
+    alt_var: str = None,
+    chid_var: str = None,
+):
+    """
+    Multinomiales / Conditional Logit – wie R's mlogit().
+
+    Parameters
+    ----------
+    formula : str
+        mlogit-Formel, z.B. "mode ~ 0 | income".
+        - Vor dem |  : alternativ-spezifische Variablen
+        - Nach dem | : individuen-spezifische Variablen
+    data : pd.DataFrame
+        Pandas DataFrame mit den Daten.
+    choice : str | None
+        Name der Choice-Variable.
+    shape : str
+        "long" (default) oder "wide".
+    alt_var : str | None
+        Name der Alternativen-Variable (bei long format).
+    chid_var : str | None
+        Name der Choice-ID-Variable (bei long format).
+
+    Returns
+    -------
+    R mlogit-Objekt.
+    """
+    _rpkg.install_packages("mlogit")
+    _r_mlogit = importr("mlogit")
+
+    r_df = _df_to_r(data)
+    ro.globalenv["_pyrstat_df_"] = r_df
+
+    mdata_kwargs = {}
+    if choice:
+        mdata_kwargs["choice"] = choice
+    if alt_var:
+        mdata_kwargs["alt.var"] = alt_var
+    if chid_var:
+        mdata_kwargs["chid.var"] = chid_var
+
+    if mdata_kwargs:
+        r_mdata = _r_mlogit.mlogit_data(
+            ro.globalenv["_pyrstat_df_"],
+            shape=shape,
+            **mdata_kwargs,
+        )
+    else:
+        r_mdata = ro.globalenv["_pyrstat_df_"]
+
+    ro.globalenv["_pyrstat_mdata_"] = r_mdata
+
+    r_formula = ro.r(f'mFormula({formula})')
+    model = _r_mlogit.mlogit(r_formula, data=ro.globalenv["_pyrstat_mdata_"])
+    model._pyrstat_formula = formula
+    return model
+
+
+
+
+
+
+
 
 
 
@@ -219,14 +287,13 @@ def head(y, n: int = 6):
 def summary(model):
     """
     R-style summary() – generische Funktion wie in R.
-    Funktioniert für lm, glm, VAR, Arima, ivreg, etc.
+    Funktioniert für lm, glm, mlogit, VAR, Arima, ivreg, etc.
     """
     r_class = list(ro.r("class")(model))
 
     captured = ro.r("capture.output")(ro.r("summary")(model))
     lines = list(captured)
 
-    # Call-Block bereinigen (ABI-Modus dumpt den ganzen Quellcode)
     filtered = []
     skip = False
     for line in lines:
@@ -234,7 +301,9 @@ def summary(model):
             filtered.append("Call:")
             formula_str = getattr(model, "_pyrstat_formula", None)
             if formula_str:
-                if "glm" in r_class:
+                if "mlogit" in r_class:
+                    prefix = "mlogit"
+                elif "glm" in r_class:
                     prefix = "glm"
                 elif "ivreg" in r_class:
                     prefix = "ivreg"
@@ -245,11 +314,11 @@ def summary(model):
             skip = True
             continue
         if skip:
-            # Call-Block endet bei nächstem bekannten Abschnitt
             if any(line.strip().startswith(s) for s in [
                 "Residual", "Estimation", "Coefficients", "---",
                 "Covariance", "Correlation", "Series:", "ARIMA",
                 "Deviance", "AIC", "Number", "Dispersion",
+                "Frequencies", "Log-Likelihood", "bfgs", "Newton",
             ]):
                 skip = False
             else:
@@ -258,8 +327,6 @@ def summary(model):
             filtered.append(line)
 
     print("\n".join(filtered))
-
-
 
 
 # ── vcovHC ──────────────────────────────────────────────────────────────
