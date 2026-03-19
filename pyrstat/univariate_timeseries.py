@@ -351,10 +351,10 @@ def kpss_test(y, null: str = "Level", pretty: bool = True):
 def forecast(model, h: int = 10, level: list = None, pretty: bool = True,
              plot: bool = False, plot_path: str = "/tmp/pyrstat_forecast.pdf"):
     model_r = _unwrap(model)
-    ro.globalenv["_pyrstat_model_"] = model_r
+    ro.globalenv["pyrstatmodel"] = model_r  # ← ohne Underscores!
     
     # ── forecast via R-String (ABI-kompatibel) ──
-    cmd = f'forecast::forecast(_pyrstat_model_, h={h}'
+    cmd = f'forecast::forecast(pyrstatmodel, h={h}'
     if level is not None:
         level_str = ', '.join(str(l) for l in level)
         cmd += f', level=c({level_str})'
