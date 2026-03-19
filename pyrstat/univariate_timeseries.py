@@ -347,41 +347,37 @@ def kpss_test(y, null: str = "Level", pretty: bool = True):
 
     return result
 
+
 def forecast(model, h: int = 10, level: list = None, pretty: bool = True,
              plot: bool = False, plot_path: str = "/tmp/pyrstat_forecast.pdf"):
-    """
-    Forecast – wie R's forecast::forecast().
-    Parameters
-    ----------
-    model : R Arima-Objekt (von Arima() oder auto_arima())
-    h : int
-        Forecast-Horizont (default 10).
-    level : list | None
-        Konfidenzniveaus (default [80, 95]).
-    pretty : bool
-        Output in der Konsole (default True).
-    plot : bool
-        Fan-Chart als PDF oeffnen (default False).
-    plot_path : str
-    Returns
-    -------
-    R forecast-Objekt mit $mean, $lower, $upper, $level, $x, $fitted, $residuals.
-    """
-    kwargs = {"h": h}
-    if level is not None:
-        kwargs["level"] = ro.IntVector(level)
     model_r = _unwrap(model)
-    result = _r_forecast.forecast(model_r, **kwargs)
+    ro.globalenv["_pyrstat_model_"] = model_r
+    
+    # ── forecast via R-String (ABI-kompatibel) ──
+    cmd = f'forecast::forecast(_pyrstat_model_, h={h}'
+    if level is not None:
+        level_str = ', '.join(str(l) for l in level)
+        cmd += f', level=c({level_str})'
+    cmd += ')'
+    result = ro.r(cmd)
+
     if pretty:
         captured = ro.r("capture.output")(result)
         print("\n".join(list(captured)))
+
     if plot:
         ro.globalenv["pyrstatfcresult"] = result
         ro.r('pdf("{}")'.format(plot_path))
         ro.r("plot(pyrstatfcresult)")
         ro.r("dev.off()")
         subprocess.Popen(["open", plot_path])
+
     return result
+
+
+
+
+
 def ndiffs(y, alpha: float = 0.05, test: str = "kpss", max_d: int = 2):
     """
     Anzahl benoetigter Differenzierungen – wie R's forecast::ndiffs().
