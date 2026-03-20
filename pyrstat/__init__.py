@@ -1,7 +1,7 @@
 from pyrstat.core import (
     lm, glm, summary, coef, fitted_values, residuals,
     vcovHC, coeftest, bptest, reset, linearHypothesis,
-    ivreg, summary_ivreg, residuals, head, predict,confusionMatrix,mlogit
+    ivreg, summary_ivreg, residuals, head, predict,confusionMatrix,mlogit,postResample
 )
 
 
@@ -9,7 +9,7 @@ from pyrstat.core import (
 __all__ = [
     "lm","glm", "summary", "coef", "fitted_values", "residuals",
     "vcovHC", "coeftest", "bptest", "reset", "linearHypothesis",
-    "ivreg", "summary_ivreg", "predict", "confusionMatrix","mlogit"
+    "ivreg", "summary_ivreg", "predict", "confusionMatrix","mlogit","postResample"
 ]
 
 

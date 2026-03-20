@@ -26,7 +26,7 @@ from rpy2.robjects.conversion import localconverter
 # ── R-Pakete einmalig installieren & laden ──────────────────────────────
 
 _rpkg = rpackagemanager()
-for _pkg in ["sandwich", "lmtest", "car", "ivreg"]:
+for _pkg in ["sandwich", "lmtest", "car", "ivreg","caret"]:
     _rpkg.install_packages(_pkg)
 
 _r_ivreg = importr("ivreg")
@@ -722,3 +722,41 @@ def confusionMatrix(
         print("\n".join(list(captured)))
 
     return result
+
+
+
+def postResample(pred, obs, pretty: bool = True):
+    """
+    R's caret::postResample() — RMSE, R², MAE auf einmal.
+    
+    Parameters
+    ----------
+    pred : array-like
+        Vorhergesagte Werte.
+    obs : array-like
+        Tatsächliche Werte.
+    pretty : bool
+        R-style Output (default True).
+        
+    Returns
+    -------
+    dict mit RMSE, Rsquared, MAE
+    """
+    import numpy as np
+    
+    pred_r = ro.FloatVector(np.array(pred).flatten())
+    obs_r = ro.FloatVector(np.array(obs).flatten())
+    
+    ro.globalenv["pyrstatpred"] = pred_r
+    ro.globalenv["pyrstatobs"] = obs_r
+    
+    result = ro.r("caret::postResample(pyrstatpred, pyrstatobs)")
+    
+    names = list(ro.r("names")(result))
+    values = list(result)
+    
+    if pretty:
+        for name, val in zip(names, values):
+            print(f"  {name:>10s}: {val:.6f}")
+    
+    return dict(zip(names, values))
