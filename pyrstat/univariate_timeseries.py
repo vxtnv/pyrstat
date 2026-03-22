@@ -164,6 +164,7 @@ def auto_arima(
     max_order: int = 5,
     d: Optional[int] = None,
     D: Optional[int] = None,
+    xreg=None,
     pretty: bool = True,
 ):
     kwargs = {
@@ -177,6 +178,8 @@ def auto_arima(
         kwargs["d"] = d
     if D is not None:
         kwargs["D"] = D
+    if xreg is not None:
+        kwargs["xreg"] = xreg
 
     y = _unwrap(y)
     model = _r_forecast.auto_arima(y, **kwargs)
@@ -348,16 +351,22 @@ def kpss_test(y, null: str = "Level", pretty: bool = True):
     return result
 
 
-def forecast(model, h: int = 10, level: list = None, pretty: bool = True,
+def forecast(model, h: int = 10, level: list = None, xreg=None, pretty: bool = True,
              plot: bool = False, plot_path: str = "/tmp/pyrstat_forecast.pdf"):
     model_r = _unwrap(model)
-    ro.globalenv["pyrstatmodel"] = model_r  # ← ohne Underscores!
-    
+    ro.globalenv["pyrstatmodel"] = model_r
+
+    # xreg in R-Umgebung ablegen falls vorhanden
+    if xreg is not None:
+        ro.globalenv["pyrstatxreg"] = xreg
+
     # ── forecast via R-String (ABI-kompatibel) ──
     cmd = f'forecast::forecast(pyrstatmodel, h={h}'
     if level is not None:
         level_str = ', '.join(str(l) for l in level)
         cmd += f', level=c({level_str})'
+    if xreg is not None:
+        cmd += ', xreg=pyrstatxreg'
     cmd += ')'
     result = ro.r(cmd)
 
