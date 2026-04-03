@@ -26,7 +26,7 @@ from rpy2.robjects.conversion import localconverter
 # ── R-Pakete einmalig installieren & laden ──────────────────────────────
 
 _rpkg = rpackagemanager()
-for _pkg in ["sandwich", "lmtest", "car", "ivreg","caret"]:
+for _pkg in ["stringi", "sandwich", "lmtest", "car", "ivreg","caret"]:
     _rpkg.install_packages(_pkg)
 
 _r_ivreg = importr("ivreg")
