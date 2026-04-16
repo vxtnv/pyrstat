@@ -288,7 +288,15 @@ def summary(model):
     """
     R-style summary() – generische Funktion wie in R.
     Funktioniert für lm, glm, mlogit, VAR, Arima, ivreg, etc.
+    Auch für pd.DataFrame.
     """
+    # ── DataFrame-Pfad (wie R's summary.data.frame) ───────────────────
+    if isinstance(model, pd.DataFrame):
+        r_df = _df_to_r(model)
+        captured = ro.r("capture.output")(ro.r("summary")(r_df))
+        print("\n".join(list(captured)))
+        return
+
     r_class = list(ro.r("class")(model))
 
     captured = ro.r("capture.output")(ro.r("summary")(model))
