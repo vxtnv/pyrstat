@@ -31,7 +31,7 @@ model = lm("log(q) ~ log(p) + income", data)
 
 # Instrumental variables regression
 iv_model = ivreg("log(q) ~ log(p) + income | income + z", data)
-summary_ivreg(iv_model)
+summary(iv_model)
 ```
 
 ## Core API
